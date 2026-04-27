@@ -11,7 +11,7 @@ requests. Son rôle est triple :
 - **Bloquer** l'intégration via le **Quality Gate** lorsque les seuils ne sont
   pas respectés sur le code nouveau
 
-### 2.2 Types de problèmes surveillés
+### 1.2 Types de problèmes surveillés
 
 | Catégorie         | Exemples                                              | Sévérité |
 | ----------------- | ----------------------------------------------------- | -------- |
