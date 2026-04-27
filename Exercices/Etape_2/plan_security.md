@@ -51,6 +51,8 @@ avec le **OWASP Top 10:2025**. Risques particulièrement pertinents pour ce proj
 - CORS à durcir (actuellement `@CrossOrigin` sans restriction explicite)
 - URL backend à externaliser côté front (actuellement hardcodée)
 - Configuration BDD à externaliser côté back (actuellement HSQLDB par défaut)
+- Conteneurs Docker à exécuter en utilisateur non-root (actuellement root)
+
 
 ### 1.4 Plan d'action de remédiation
 

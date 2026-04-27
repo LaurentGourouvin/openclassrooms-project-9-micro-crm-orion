@@ -32,6 +32,7 @@ Objectifs du `docker-compose` :
   en partie 2)
 
 > La base de données HSQLDB est embarquée dans le conteneur back (en mémoire).
+> En conséquence, **les données sont perdues à chaque redémarrage** du conteneur.
 > Dans un contexte de production réel, il faudrait extraire la BDD vers un
 > service dédié (PostgreSQL/MySQL) avec volume persistant. Ce point est
 > documenté comme dette technique mais hors périmètre de la mission CI/CD.
@@ -44,11 +45,13 @@ Le périmètre de la mission cible un **déploiement local containerisé** + une
 **Étapes envisagées dans la CD**
 
 1. **Build des images** (front et back) à partir du Dockerfile multi-stage
-2. **Tag des images** :
+2. **Publication conditionnée** : uniquement sur `main` ou tags `vX.Y.Z`
+   (pas sur les pull requests pour éviter de polluer le registre)
+3. **Tag des images** :
     - `latest` pour la branche `main`
     - `vX.Y.Z` pour les tags de release (versionnage sémantique)
-3. **Publication** sur **GitHub Container Registry (ghcr.io)** 
-4. **Documentation** des commandes pour relancer l'application à partir des
+4. **Publication** sur **GitHub Container Registry (ghcr.io)**
+5. **Documentation** des commandes pour relancer l'application à partir des
    images publiées
 
 **Hors périmètre de cette mission**

@@ -7,8 +7,9 @@
 - Génération de la coverage au format `lcov` pour SonarCloud
 
 **Back (Spring Boot)**
-- Tests unitaires et d'intégration JUnit 5 (2 tests existants : `contextLoads`
+- Tests d'intégration JUnit 5 (2 tests existants : `contextLoads`
   et `whenFindByEmail_thenReturnPerson`)
+- Aucun test unitaire → identifié comme dette de tests
 - Génération de la coverage XML via JaCoCo pour SonarCloud
 
 **Transverse**
@@ -17,6 +18,9 @@
 > ⚠️ La couverture de tests actuelle est faible (8 tests front, 2 tests back).
 > Le pipeline est conçu pour l'industrialisation : l'enrichissement des suites
 > de tests est identifié comme une action de moyen terme (cf. plan de sécurité).
+
+> La stratégie de branches retenue est GitHub Flow : `main` comme branche
+> principale, branches de feature mergées via pull request.
 
 ### 1.2 Moments d'exécution
 
