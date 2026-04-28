@@ -26,7 +26,7 @@
 
 | Événement                          | Tests exécutés                                | Objectif                          |
 | ---------------------------------- | --------------------------------------------- | --------------------------------- |
-| `push` sur `main` / `develop`      | Tous les tests + Sonar + build Docker         | Validation complète avant merge   |
+| `push` sur `main`                  | Tous les tests + Sonar + build Docker         | Mise à jour de la production      |
 | `pull_request` vers `main`         | Tous les tests + analyse Sonar                | Garde-fou avant intégration       |
 | Création d'un tag `vX.Y.Z`         | Tous les tests + build + publication d'images | Validation de release             |
 
