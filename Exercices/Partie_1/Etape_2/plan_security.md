@@ -53,6 +53,12 @@ avec le **OWASP Top 10:2025**. Risques particulièrement pertinents pour ce proj
 - Configuration BDD à externaliser côté back (actuellement HSQLDB par défaut)
 - Conteneurs Docker à exécuter en utilisateur non-root (actuellement root)
 
+**Garde-fou Quality Gate**
+- L'action `sonarqube-quality-gate-action` fait échouer le pipeline si
+  le Quality Gate est KO
+- Branch protection activée sur `main` et `develop` : aucun merge
+  possible si la CI échoue
+- Les contournements admin sont désactivés (`Do not allow bypassing`)
 
 ### 1.4 Plan d'action de remédiation
 
