@@ -44,12 +44,3 @@ test {
     useJUnitPlatform()
 	finalizedBy jacocoTestReport
 }
-
-sonar {
-	properties {
-		property "sonar.projectKey", "LaurentGourouvin_openclassrooms-project-9-micro-crm-orion"
-		property "sonar.organization", "laurentgourouvin"
-		property "sonar.coverage.jacoco.xmlReportPaths",
-				"build/reports/jacoco/test/jacocoTestReport.xml"
-	}
-}
