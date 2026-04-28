@@ -1,0 +1,19 @@
+services:
+  back:
+    build:
+      context: .
+      target: back
+    container_name: microcrm-back
+    ports:
+      - "8080:8080"
+
+  front:
+    build:
+      context: .
+      target: front
+    container_name: microcrm-front
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - back
