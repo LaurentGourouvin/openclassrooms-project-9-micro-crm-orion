@@ -1,3 +1,5 @@
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=LaurentGourouvin_openclassrooms-project-9-micro-crm-orion&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=LaurentGourouvin_openclassrooms-project-9-micro-crm-orion)
+
 <p align="center">
    <img src="./front/src/favicon.png" width="192px" />
 </p>
