@@ -34,7 +34,7 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle
 
       - name: Build & test
-        run: ./gradlew build jacocoTestReport
+        run: ./gradlew build jacocoTestReport copyDependencies
 
       - name: Upload back artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -42,6 +42,7 @@ jobs:
           name: back-coverage
           path: |
             back/build/classes
+            back/build/dependencies
             back/build/reports/jacoco/test/jacocoTestReport.xml
           retention-days: 1
 
@@ -117,6 +118,7 @@ jobs:
             -Dsonar.test.inclusions=**/*Test.java,**/*.spec.ts
             -Dsonar.exclusions=**/node_modules/**,**/*.spec.ts,**/build/**,**/dist/**
             -Dsonar.java.binaries=back/build/classes
+            -Dsonar.java.libraries=back/build/dependencies/*.jar
             -Dsonar.coverage.jacoco.xmlReportPaths=back/build/reports/jacoco/test/jacocoTestReport.xml
             -Dsonar.javascript.lcov.reportPaths=front/coverage/microcrm/lcov.info
             -Dsonar.typescript.lcov.reportPaths=front/coverage/microcrm/lcov.info
