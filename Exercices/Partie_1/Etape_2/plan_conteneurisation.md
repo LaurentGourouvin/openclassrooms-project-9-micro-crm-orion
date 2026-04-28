@@ -61,6 +61,39 @@ Le périmètre de la mission cible un **déploiement local containerisé** + une
 Ces points peuvent être envisagés dans une itération ultérieure et seront
 mentionnés dans le plan de mise à jour de la documentation finale.
 
+### 1.4 Améliorations apportées au Dockerfile
+
+L'analyse du Dockerfile fourni (cf. `Dockerfile_analyse.md`) a identifié plusieurs
+points d'amélioration. Les corrections suivantes ont été appliquées :
+
+| Amélioration | Avant | Après | Bénéfice |
+| ------------ | ----- | ----- | -------- |
+| Image Node pinnée | `node` (sans tag) | `node:20.9.0-slim` | Reproductibilité, compatibilité Angular 17.3 garantie |
+| Cohérence Java | Build JDK 17 / Runtime JRE 21 | Build JDK 17 / Runtime JRE 17 | Élimine les comportements imprévisibles liés à un runtime différent du build |
+| Port `back` corrigé | `EXPOSE 4200` (port Angular dev) | `EXPOSE 8080` (port Spring Boot) | Documentation cohérente avec la réalité |
+| Tests sortis du build Docker | `./gradlew build` (inclut tests) | `./gradlew bootJar -x test` | Build Docker plus rapide, séparation des responsabilités (les tests sont exécutés en CI) |
+| Cache `apk` non conservé | `apk add caddy` | `apk add --no-cache caddy` | Images finales plus légères, bonne pratique Alpine |
+
+> ⚠️ Le pinning d'image en version Alpine pour le stage `back-build` (ex.
+> `eclipse-temurin:17-jdk-alpine`) n'a pas pu être appliqué en raison de
+> contraintes de plateforme (incompatibilité ARM64 sur certaines variantes
+> Alpine). L'image `gradle:jdk17` est conservée pour ce stage uniquement,
+> qui est de toute façon **détruit après le build** et n'impacte pas la
+> taille de l'image finale.
+
+### 1.5 Améliorations identifiées non appliquées
+
+Certaines améliorations identifiées dans l'analyse ne sont pas encore
+appliquées et sont reportées au plan d'action :
+
+- **Utilisateur non-root** dans les conteneurs (sécurité OWASP A02 –
+  Security Misconfiguration)
+- **Pinning de version précise** sur le stage `back-build`
+- **Vérification du `.dockerignore`** pour optimiser le contexte de build
+
+Ces points sont documentés dans `Dockerfile_analyse.md` et seront traités
+dans une itération ultérieure.
+
 ## Ressources
 
 - https://docs.docker.com/compose/intro/features-uses/
