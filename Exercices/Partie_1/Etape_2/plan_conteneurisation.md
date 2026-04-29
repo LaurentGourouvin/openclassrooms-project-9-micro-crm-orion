@@ -16,7 +16,8 @@ plusieurs cibles (`targets`) :
 > Cf. analyse détaillée dans `Dockerfile_analyse.md`. Plusieurs ajustements ont
 > été identifiés (versions à pinner, cohérence Java 17, port back à corriger,
 > exécution non-root, déplacement des tests hors du build Docker). Ces
-> améliorations seront appliquées à l'étape de mise en œuvre.
+> améliorations sont détaillées en section 1.4 (appliquées) et 1.5
+> (non appliquées, reportées).
 
 ### 1.2 Rôle de `docker-compose`
 
@@ -42,24 +43,34 @@ Objectifs du `docker-compose` :
 Le périmètre de la mission cible un **déploiement local containerisé** + une
 **publication automatisée des images Docker** sur un registre.
 
-**Étapes envisagées dans la CD**
+#### CD implémenté
 
-1. **Build des images** (front et back) à partir du Dockerfile multi-stage
-2. **Publication conditionnée** : uniquement sur `main` ou tags `vX.Y.Z`
-   (pas sur les pull requests pour éviter de polluer le registre)
+La phase de déploiement continu est **opérationnelle** via un job
+`publish-docker` dans le workflow GitHub Actions :
+
+1. **Build des images** (back + front) à partir du Dockerfile multi-stage
+2. **Publication conditionnée** : uniquement sur push `main`, après
+   validation complète du Quality Gate SonarCloud et du scan Trivy
 3. **Tag des images** :
-    - `latest` pour la branche `main`
-    - `vX.Y.Z` pour les tags de release (versionnage sémantique)
-4. **Publication** sur **GitHub Container Registry (ghcr.io)**
-5. **Documentation** des commandes pour relancer l'application à partir des
-   images publiées
+    - `latest` pour la dernière version stable
+    - SHA court du commit pour la traçabilité (ex: `2c4b0e2`)
+4. **Registre cible** : **GitHub Container Registry (ghcr.io)**
+5. **Authentification** : `GITHUB_TOKEN` automatique (pas de secret manuel)
+6. **Visibilité** : packages publics (le repo étant public)
 
-**Hors périmètre de cette mission**
-- Déploiement sur un environnement cloud (AWS, Azure, GCP)
-- Orchestration Kubernetes
+> Détails techniques (conditions d'exécution, stratégie de tags,
+> authentification) documentés dans `plan_ci.md` section 1.11.
 
-Ces points peuvent être envisagés dans une itération ultérieure et seront
-mentionnés dans le plan de mise à jour de la documentation finale.
+#### Hors périmètre de cette mission
+
+- **Déploiement effectif** sur un environnement cible (la publication
+  rend les images disponibles, mais ne les fait pas tourner sur un
+  serveur de production)
+- **Orchestration Kubernetes** (Argo CD, Flux, Helm)
+- **Cloud public** (AWS, Azure, GCP)
+
+Ces évolutions sont envisageables pour des itérations ultérieures et
+mentionnées dans le plan de mise à jour de la documentation finale.
 
 ### 1.4 Améliorations apportées au Dockerfile
 
@@ -98,18 +109,98 @@ dans une itération ultérieure.
 
 Le brief mentionne Twistlock comme outil possible pour scanner les images
 Docker. Cet outil étant commercial (Prisma Cloud par Palo Alto Networks),
-il n'a pas été mis en œuvre dans le cadre de ce projet.
+il a été remplacé par **Trivy** (Aqua Security), standard open-source de
+l'industrie pour le scan d'images Docker.
 
-**Alternative open-source identifiée** : [Trivy](https://github.com/aquasecurity/trivy)
-(Aqua Security), standard de l'industrie pour le scan d'images Docker.
-Intégrable facilement dans GitHub Actions via `aquasecurity/trivy-action`.
+#### Mise en œuvre
 
-**Action prévue (court terme)** : intégrer Trivy en parallèle de l'analyse
-SonarCloud pour couvrir aussi les vulnérabilités au niveau des couches
-système des images Docker (CVE sur les paquets Alpine/Debian, version de
-Java, etc.).
+Trivy est intégré au pipeline CI via un job dédié `image-scan` qui tourne
+en parallèle des autres jobs. À chaque exécution :
+
+1. Les images `back` et `front` sont buildées localement sur le runner
+2. Trivy scanne chaque image (sévérité `CRITICAL,HIGH`)
+3. Les résultats sont uploadés au format **SARIF** dans
+   `GitHub Security → Code Scanning`
+
+#### Choix de version
+
+L'action `aquasecurity/trivy-action` est pinnée en **v0.36.0** par hash
+de commit, version publiée par Aqua après la remédiation de l'incident
+de supply chain CVE-2026-33634 (mars 2026). Détails dans `plan_security.md`
+section 1.4.
+
+#### Couverture complémentaire à SonarCloud
+
+| Outil | Couvre |
+| ----- | ------ |
+| **SonarCloud** | Code source applicatif (bugs, code smells, hotspots, vulnérabilités d'écriture) |
+| **Trivy** | Images Docker (CVE connues dans les dépendances système : JRE, Tomcat embarqué, paquets Alpine) |
+
+Cette double couverture met en place une **défense en profondeur** :
+SonarCloud sécurise ce que l'on écrit, Trivy sécurise ce que l'on
+embarque.
 
 > Référentiel : OWASP Top 10:2025 — A03 Software Supply Chain Failures.
+
+### 1.7 Utilisation des images publiées
+
+Les images sont disponibles publiquement sur ghcr.io et peuvent être
+récupérées sans authentification.
+
+#### Pull des images
+
+```shell
+# Dernière version stable
+docker pull ghcr.io/laurentgourouvin/microcrm-back:latest
+docker pull ghcr.io/laurentgourouvin/microcrm-front:latest
+
+# Version spécifique (rollback)
+docker pull ghcr.io/laurentgourouvin/microcrm-back:<sha_court>
+```
+
+L'historique complet des versions publiées est consultable sur la page
+**Packages** du repository GitHub.
+
+#### Lancement local depuis les images publiées
+
+```shell
+# Back en arrière-plan
+docker run --rm -d -p 8080:8080 \
+  ghcr.io/laurentgourouvin/microcrm-back:latest
+
+# Front (les deux ports 80 et 443 sont nécessaires car Caddy applique
+# une politique HTTPS-by-default avec certificat auto-signé)
+docker run --rm -d -p 80:80 -p 443:443 \
+  ghcr.io/laurentgourouvin/microcrm-front:latest
+```
+
+L'application est ensuite accessible sur `https://localhost` (le navigateur
+demandera d'accepter le certificat auto-signé).
+
+#### Validation fonctionnelle
+
+Le test end-to-end a été effectué : pull des images depuis ghcr.io,
+démarrage local, vérification que le front charge et communique
+correctement avec le back (récupération de la fixture `John Doe` /
+`Orion Incorporated`). Cela confirme que les images publiées par la
+CI/CD sont **autonomes et fonctionnelles**.
+
+#### Limitations identifiées
+
+Deux points sont à connaître pour un usage en production :
+
+1. **Caddy en HTTPS-by-default** : le serveur web Caddy refuse d'écouter
+   en HTTP simple et génère automatiquement un certificat TLS auto-signé.
+   C'est une bonne propriété de sécurité (OWASP A02 — secure-by-default),
+   mais demande de mapper le port 443 et d'accepter le certificat en
+   environnement de développement.
+
+2. **URL backend hardcodée dans le bundle Angular** : le fichier
+   `front/src/app/config.ts` fige l'URL `http://localhost:8080` au
+   moment du build. Pour un déploiement multi-environnement, cette URL
+   devrait être externalisée via une variable d'environnement injectée
+   au runtime. Identifié comme dette technique applicative dans
+   `front_analyse.md`.
 
 ## Ressources
 

@@ -9,7 +9,17 @@ Le workflow `ci.yml` est déclenché sur deux événements :
 - `push` sur la branche `main`
 - `pull_request` vers `main` (événements `opened`, `synchronize`, `reopened`)
 
-Il est composé de **3 jobs** :
+Il est composé de **5 jobs** organisés en deux phases :
+
+| Phase | Job | Rôle |
+| ----- | --- | ---- |
+| **CI** | `back-build-test` | Compile le JAR Spring Boot, exécute les tests JUnit, génère le rapport JaCoCo |
+| **CI** | `front-build-test` | Installe les dépendances npm, exécute les tests Karma, génère le rapport lcov |
+| **CI** | `image-scan` | Scan des images Docker via Trivy, remonte les CVE dans GitHub Security |
+| **CI** | `sonar-analysis` | Récupère les rapports via artifacts, lance une analyse SonarCloud unifiée, vérifie le Quality Gate |
+| **CD** | `publish-docker` | Build et publie les images Docker sur ghcr.io (uniquement sur push main) |
+
+Le diagramme suivant illustre l'enchaînement :
 
 ```mermaid
 flowchart TD
@@ -106,7 +116,30 @@ Combiné avec la **branch protection** sur `main` qui exige tous les checks
 verts pour autoriser un merge, cela garantit qu'aucun code dégradant la
 qualité ne peut être intégré sans revue.
 
-### 1.5 Optimisations de performance
+### 1.5 Scan de sécurité des images Docker (Trivy)
+
+Le job `image-scan` complète l'analyse SonarCloud en couvrant un angle
+différent de la sécurité : les **CVE connues dans les dépendances système**
+des images Docker (paquets Alpine, JRE, Tomcat embarqué, etc.).
+
+Le job tourne **en parallèle** des autres jobs CI (pas de `needs:`) pour
+ne pas allonger la durée totale du pipeline. Il :
+
+1. Build les images `back` et `front` via le Dockerfile multi-stage
+2. Lance Trivy sur chaque image avec sévérité `CRITICAL,HIGH`
+3. Génère un rapport au format **SARIF**
+4. Upload le SARIF vers l'onglet **GitHub Security → Code Scanning**
+
+Mode actuel : **informatif** (`exit-code: 0`). Le job ne fait pas échouer
+la CI sur détection de vulnérabilité, le temps que les CVE existantes
+soient triées et acknowledgées. À terme, le mode bloquant sera activé
+sur les CVE `CRITICAL` introduites par du nouveau code.
+
+> Le détail du choix de version (`v0.36.0` post-incident CVE-2026-33634)
+> et l'analyse des vulnérabilités détectées sont documentés dans
+> `plan_security.md` (sections 1.4 et 1.5).
+
+### 1.6 Optimisations de performance
 
 Plusieurs caches sont mis en place pour réduire le temps d'exécution du
 pipeline :
@@ -120,7 +153,7 @@ pipeline :
 Au premier passage, la CI prend environ 2-3 minutes. Avec les caches
 chauds, elle descend à 1-2 minutes.
 
-### 1.6 Sécurité de la chaîne d'approvisionnement
+### 1.7 Sécurité de la chaîne d'approvisionnement
 
 #### Pinning par hash de commit
 
@@ -150,7 +183,7 @@ Le `SONAR_TOKEN` est stocké dans les **GitHub Secrets** et référencé via
 - Les Dockerfiles
 - Les images Docker produites
 
-### 1.7 Configuration Gradle pour Sonar
+### 1.8 Configuration Gradle pour Sonar
 
 #### Plugin et coverage
 
@@ -181,7 +214,7 @@ inter-procédurales fines).
 Sans cette tâche, SonarCloud émettait l'avertissement :
 > Dependencies/libraries were not provided for analysis of SOURCE files.
 
-### 1.8 Configuration Karma pour Sonar
+### 1.9 Configuration Karma pour Sonar
 
 Le `front/karma.conf.js` a été adapté pour générer le format de coverage
 attendu par SonarCloud :
@@ -201,7 +234,7 @@ coverageReporter: {
 Le format `lcovonly` est le seul exploité par SonarCloud, les deux autres
 sont conservés pour le confort de développement.
 
-### 1.9 Branch protection
+### 1.10 Branch protection
 
 La branche `main` est protégée avec les règles suivantes :
 - Pull Request obligatoire avant merge
@@ -215,6 +248,82 @@ La branche `main` est protégée avec les règles suivantes :
 
 Ces règles garantissent que le Quality Gate et les tests sont
 **effectivement bloquants**, et pas seulement informatifs.
+
+### 1.11 Phase CD : publication automatique des images Docker
+
+Après la validation CI complète (Quality Gate Sonar passé + tous les
+checks verts), un dernier job `publish-docker` s'exécute **uniquement
+sur push `main`** pour publier les images Docker sur GitHub Container
+Registry.
+
+#### Conditions d'exécution
+
+```yaml
+needs: [back-build-test, front-build-test, sonar-analysis, image-scan]
+if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+```
+
+Cette double condition garantit qu'aucune image dégradée ne se retrouve
+dans le registre :
+- Tous les jobs CI doivent être verts (`needs:`)
+- Le déclenchement doit être un push sur `main` (pas une PR)
+
+#### Stratégie de tags
+
+Chaque image est publiée avec **deux tags simultanés** :
+
+| Tag | Usage |
+| --- | ----- |
+| `latest` | Dernière version stable, pour les déploiements continus |
+| `<sha_court>` | Ex. `2c4b0e2`, pour la traçabilité et le rollback |
+
+Le SHA court est calculé via `git rev-parse --short HEAD`. Il correspond
+au commit de merge sur `main`, ce qui garantit que chaque tag pointe vers
+**un commit existant** sur la branche.
+
+#### Authentification ghcr.io
+
+L'authentification utilise le `GITHUB_TOKEN` automatique fourni par
+GitHub Actions, avec la permission `packages: write` déclarée au niveau
+du job. Aucun secret manuel à configurer.
+
+#### Conversion lowercase du nom de propriétaire
+
+ghcr.io exige que les noms de packages soient en **minuscules**, ce
+qui n'est pas le cas par défaut du nom de propriétaire GitHub
+(`LaurentGourouvin`). Une étape de conversion via `tr` est appliquée
+en début de job :
+
+```yaml
+- name: Set lowercase repository owner
+  run: |
+    echo "REPO_OWNER_LOWER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+```
+
+La variable `${{ env.REPO_OWNER_LOWER }}` est ensuite utilisée dans tous
+les tags d'images.
+
+#### Pourquoi pas sur les Pull Requests
+
+Publier depuis une PR pollurait le registre avec des images intermédiaires
+qui n'ont pas vocation à être déployées. La publication n'a lieu qu'**après
+le merge**, sur le commit final de `main`, pour garantir que :
+- L'image publiée correspond exactement au code testé sur main
+- Le tag SHA pointe vers un commit qui existe réellement sur la branche
+
+#### Limites de la phase CD
+
+Cette mission cible la **publication d'images** comme étape de CD, pas
+le **déploiement effectif** sur un environnement cible. La suite logique
+(pull et démarrage automatisés sur un serveur) sort du périmètre :
+
+- **Déploiement manuel** : un opérateur peut pull et démarrer les images
+- **Watchtower / Argo CD / Flux** : surveillance automatique du registre
+- **Plateforme PaaS** : Render, Railway, Fly.io détectent les nouvelles
+  images et redéploient
+
+Ces options sont mentionnées dans le `plan_conteneurisation.md` comme
+évolutions possibles.
 
 ## Ressources
 
