@@ -126,27 +126,37 @@ qui s'exécute automatiquement sur chaque push sur `main` et chaque Pull Request
 
 ```mermaid
 flowchart TD
-   Start([Push main / Pull Request]) --> Back[back-build-test<br/>Build Gradle + Tests JUnit<br/>Coverage JaCoCo]
-   Start --> Front[front-build-test<br/>npm ci + Tests Karma<br/>Coverage lcov]
-   Start --> Scan[image-scan<br/>Trivy sur images Docker<br/>Rapport SARIF]
+    Start([Push main / Pull Request]) --> Back[back-build-test<br/>Build Gradle + Tests JUnit<br/>Coverage JaCoCo]
+    Start --> Front[front-build-test<br/>npm ci + Tests Karma<br/>Coverage lcov]
+    Start --> Scan[image-scan<br/>Trivy sur images Docker<br/>Rapport SARIF]
 
-   Back -->|artifact: jacocoTestReport.xml<br/>+ classes + dependencies| Sonar[sonar-analysis<br/>Analyse SonarCloud unifiée<br/>Quality Gate Check]
-   Front -->|artifact: lcov.info| Sonar
-   Scan --> SecurityTab[(GitHub Security<br/>Code Scanning)]
+    Back -->|artifact: jacocoTestReport.xml<br/>+ classes + dependencies| Sonar[sonar-analysis<br/>Analyse SonarCloud unifiée<br/>Quality Gate Check]
+    Front -->|artifact: lcov.info| Sonar
+    Scan --> SecurityTab[(GitHub Security<br/>Code Scanning)]
 
-   Sonar --> Result{Quality Gate}
-   Result -->|Passed| Success([CI verte<br/>Merge autorisé])
-   Result -->|Failed| Fail([CI rouge<br/>Merge bloqué])
+    Sonar --> Result{Quality Gate}
+    Result -->|Failed| Fail([CI rouge<br/>Merge bloqué])
+    Result -->|Passed| Success([CI verte<br/>Merge autorisé])
 
-   style Start fill:#4a90e2,stroke:#2c5aa0,color:#fff
-   style Back fill:#7cb342,stroke:#558b2f,color:#fff
-   style Front fill:#7cb342,stroke:#558b2f,color:#fff
-   style Scan fill:#9c27b0,stroke:#6a1b9a,color:#fff
-   style Sonar fill:#fb8c00,stroke:#e65100,color:#fff
-   style SecurityTab fill:#5e35b1,stroke:#311b92,color:#fff
-   style Success fill:#43a047,stroke:#1b5e20,color:#fff
-   style Fail fill:#e53935,stroke:#b71c1c,color:#fff
-   style Result fill:#fdd835,stroke:#f57f17,color:#000
+    Success --> Trigger{Push sur main}
+    Trigger -->|Non - PR| End([Fin du workflow])
+    Trigger -->|Oui| Publish[publish-docker<br/>Build + Push images<br/>vers ghcr.io]
+
+    Publish --> GHCR[(ghcr.io<br/>microcrm-back:latest + SHA<br/>microcrm-front:latest + SHA)]
+
+    style Start fill:#4a90e2,stroke:#2c5aa0,color:#fff
+    style Back fill:#7cb342,stroke:#558b2f,color:#fff
+    style Front fill:#7cb342,stroke:#558b2f,color:#fff
+    style Scan fill:#9c27b0,stroke:#6a1b9a,color:#fff
+    style Sonar fill:#fb8c00,stroke:#e65100,color:#fff
+    style SecurityTab fill:#5e35b1,stroke:#311b92,color:#fff
+    style Success fill:#43a047,stroke:#1b5e20,color:#fff
+    style Fail fill:#e53935,stroke:#b71c1c,color:#fff
+    style Result fill:#fdd835,stroke:#f57f17,color:#000
+    style Trigger fill:#fdd835,stroke:#f57f17,color:#000
+    style End fill:#9e9e9e,stroke:#616161,color:#fff
+    style Publish fill:#00897b,stroke:#004d40,color:#fff
+    style GHCR fill:#0288d1,stroke:#01579b,color:#fff
 ```
 
 ### Étapes principales
