@@ -189,35 +189,35 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
+      - name: Set lowercase repository owner
+        run: echo "REPO_OWNER_LOWER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Set short SHA
-        id: vars
-        run: |
-          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "owner_lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+        run: echo "SHA_SHORT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push back image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
         with:
           context: .
           target: back
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/microcrm-back:latest
-            ghcr.io/${{ github.repository_owner }}/microcrm-back:${{ steps.vars.outputs.sha_short }}
+            ghcr.io/${{ env.REPO_OWNER_LOWER }}/microcrm-back:latest
+            ghcr.io/${{ env.REPO_OWNER_LOWER }}/microcrm-back:${{ env.SHA_SHORT }}
 
       - name: Build and push front image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
         with:
           context: .
           target: front
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/microcrm-front:latest
-            ghcr.io/${{ github.repository_owner }}/microcrm-front:${{ steps.vars.outputs.sha_short }}
+            ghcr.io/${{ env.REPO_OWNER_LOWER }}/microcrm-front:latest
+            ghcr.io/${{ env.REPO_OWNER_LOWER }}/microcrm-front:${{ env.SHA_SHORT }}
