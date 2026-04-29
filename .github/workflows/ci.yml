@@ -128,3 +128,52 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
+
+  image-scan:
+    name: Image Security Scan (Trivy)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Build back image (for scan)
+        run: docker build --target back -t microcrm-back:scan .
+
+      - name: Build front image (for scan)
+        run: docker build --target front -t microcrm-front:scan .
+
+      - name: Trivy scan - back image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: 'microcrm-back:scan'
+          format: 'sarif'
+          output: 'trivy-back.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Trivy scan - front image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: 'microcrm-front:scan'
+          format: 'sarif'
+          output: 'trivy-front.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Upload Trivy results - back
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        if: always()
+        with:
+          sarif_file: 'trivy-back.sarif'
+          category: 'trivy-back'
+
+      - name: Upload Trivy results - front
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        if: always()
+        with:
+          sarif_file: 'trivy-front.sarif'
+          category: 'trivy-front'

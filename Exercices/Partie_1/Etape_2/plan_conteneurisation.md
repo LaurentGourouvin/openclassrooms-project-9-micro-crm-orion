@@ -94,9 +94,27 @@ appliquées et sont reportées au plan d'action :
 Ces points sont documentés dans `Dockerfile_analyse.md` et seront traités
 dans une itération ultérieure.
 
+### 1.6 Scan de vulnérabilités des images Docker
+
+Le brief mentionne Twistlock comme outil possible pour scanner les images
+Docker. Cet outil étant commercial (Prisma Cloud par Palo Alto Networks),
+il n'a pas été mis en œuvre dans le cadre de ce projet.
+
+**Alternative open-source identifiée** : [Trivy](https://github.com/aquasecurity/trivy)
+(Aqua Security), standard de l'industrie pour le scan d'images Docker.
+Intégrable facilement dans GitHub Actions via `aquasecurity/trivy-action`.
+
+**Action prévue (court terme)** : intégrer Trivy en parallèle de l'analyse
+SonarCloud pour couvrir aussi les vulnérabilités au niveau des couches
+système des images Docker (CVE sur les paquets Alpine/Debian, version de
+Java, etc.).
+
+> Référentiel : OWASP Top 10:2025 — A03 Software Supply Chain Failures.
+
 ## Ressources
 
 - https://docs.docker.com/compose/intro/features-uses/
 - https://docs.docker.com/build/building/multi-stage/
 - https://docs.docker.com/build/cache/
 - https://docs.docker.com/build/ci/
+- https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23 (supply chain trivy)

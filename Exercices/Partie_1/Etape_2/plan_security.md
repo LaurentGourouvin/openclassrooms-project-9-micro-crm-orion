@@ -61,6 +61,30 @@ avec le **OWASP Top 10:2025**. Risques particulièrement pertinents pour ce proj
   possible si la CI échoue
 - Les contournements admin sont désactivés (`Do not allow bypassing`)
 
+### Choix de version pour `trivy-action`
+
+L'action `aquasecurity/trivy-action` a subi une attaque de supply chain en
+mars 2026 (CVE-2026-33634) durant laquelle 76 des 77 tags ont été
+force-pushés vers du code malveillant pendant ~12 heures.
+
+**Mesures appliquées** :
+
+- Utilisation de la **v0.36.0**, version publiée par Aqua Security après
+  la remédiation complète de l'incident et la mise en place des
+  protections (immutable releases, lockdown des automatisations).
+- **Pinning par commit SHA** plutôt que par tag — c'est la défense
+  ultime contre ce type d'attaque, les hashes de commit étant immuables
+  contrairement aux tags qui peuvent être force-pushés.
+- Cohérent avec la politique de pinning par hash appliquée à
+  l'ensemble du workflow CI/CD.
+
+**Références officielles** :
+- Security advisory : https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23
+- Discussion publique : https://github.com/aquasecurity/trivy/discussions/10425
+- Communication Aqua : https://www.aquasec.com/blog/trivy-supply-chain-attack-what-you-need-to-know/
+
+**Référentiel** : OWASP Top 10:2025 — A03 Software Supply Chain Failures
+
 ### 1.4 Plan d'action de remédiation
 
 | Horizon         | Actions                                                          |

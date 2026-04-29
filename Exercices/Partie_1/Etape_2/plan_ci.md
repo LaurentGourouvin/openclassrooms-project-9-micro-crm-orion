@@ -13,20 +13,24 @@ Il est composé de **3 jobs** :
 
 ```mermaid
 flowchart TD
-Start([Push main / Pull Request]) --> Back[back-build-test<br/>Build Gradle + Tests JUnit<br/>Coverage JaCoCo]
-Start --> Front[front-build-test<br/>npm ci + Tests Karma<br/>Coverage lcov]
+    Start([Push main / Pull Request]) --> Back[back-build-test<br/>Build Gradle + Tests JUnit<br/>Coverage JaCoCo]
+    Start --> Front[front-build-test<br/>npm ci + Tests Karma<br/>Coverage lcov]
+    Start --> Scan[image-scan<br/>Trivy sur images Docker<br/>Rapport SARIF]
 
     Back -->|artifact: jacocoTestReport.xml<br/>+ classes + dependencies| Sonar[sonar-analysis<br/>Analyse SonarCloud unifiée<br/>Quality Gate Check]
     Front -->|artifact: lcov.info| Sonar
-    
+    Scan --> SecurityTab[(GitHub Security<br/>Code Scanning)]
+
     Sonar --> Result{Quality Gate}
     Result -->|Passed| Success([CI verte<br/>Merge autorisé])
     Result -->|Failed| Fail([CI rouge<br/>Merge bloqué])
-    
+
     style Start fill:#4a90e2,stroke:#2c5aa0,color:#fff
     style Back fill:#7cb342,stroke:#558b2f,color:#fff
     style Front fill:#7cb342,stroke:#558b2f,color:#fff
+    style Scan fill:#9c27b0,stroke:#6a1b9a,color:#fff
     style Sonar fill:#fb8c00,stroke:#e65100,color:#fff
+    style SecurityTab fill:#5e35b1,stroke:#311b92,color:#fff
     style Success fill:#43a047,stroke:#1b5e20,color:#fff
     style Fail fill:#e53935,stroke:#b71c1c,color:#fff
     style Result fill:#fdd835,stroke:#f57f17,color:#000
