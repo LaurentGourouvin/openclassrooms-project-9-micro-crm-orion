@@ -161,11 +161,13 @@ flowchart TD
 
 ### Étapes principales
 
-| Job | Rôle |
-| --- | ---- |
-| `back-build-test` | Compile le JAR Spring Boot, exécute les tests JUnit, génère le rapport JaCoCo |
-| `front-build-test` | Installe les dépendances npm, exécute les tests Karma, génère le rapport lcov |
-| `sonar-analysis` | Récupère les rapports via artifacts, lance une analyse SonarCloud unifiée, vérifie le Quality Gate |
+| Phase | Job | Rôle |
+| ----- | --- | ---- |
+| **CI** | `back-build-test` | Compile le JAR Spring Boot, exécute les tests JUnit, génère le rapport JaCoCo |
+| **CI** | `front-build-test` | Installe les dépendances npm, exécute les tests Karma, génère le rapport lcov |
+| **CI** | `image-scan` | Scan des images Docker via Trivy, remonte les CVE dans GitHub Security |
+| **CI** | `sonar-analysis` | Analyse SonarCloud unifiée et vérification du Quality Gate |
+| **CD** | `publish-docker` | Publication des images sur ghcr.io (push main uniquement) |
 
 La branche `main` est **protégée** : aucun merge n'est possible si la CI échoue
 ou si le Quality Gate SonarCloud est KO.
@@ -226,6 +228,39 @@ docker run -it --rm -p 8080:8080 -p 80:80 -p 443:443 orion-microcrm-standalone:l
 > via Supervisor. Elle est utile pour des tests rapides mais déconseillée en
 > production (viole le principe "un processus par conteneur"). Pour un
 > déploiement réel, utiliser `docker compose up`.
+
+## Images Docker publiées
+
+Les images de l'application sont automatiquement publiées sur **GitHub
+Container Registry** à chaque merge sur `main`. Elles sont disponibles
+publiquement, sans authentification.
+
+### Pull et utilisation
+
+```shell
+# Dernière version stable
+docker pull ghcr.io/laurentgourouvin/microcrm-back:latest
+docker pull ghcr.io/laurentgourouvin/microcrm-front:latest
+
+# Cibler une version précise (par SHA court de commit)
+docker pull ghcr.io/laurentgourouvin/microcrm-back:<sha_court>
+```
+
+L'historique complet des versions publiées est consultable dans
+l'onglet **Packages** du repository GitHub.
+
+### Lancement à partir des images publiées
+
+```shell
+docker run --rm -d -p 8080:8080 \
+  ghcr.io/laurentgourouvin/microcrm-back:latest
+
+docker run --rm -d -p 80:80 -p 443:443 \
+  ghcr.io/laurentgourouvin/microcrm-front:latest
+```
+
+Application accessible sur `https://localhost` (accepter le certificat
+auto-signé généré par Caddy).
 
 ## Documentation technique
 
