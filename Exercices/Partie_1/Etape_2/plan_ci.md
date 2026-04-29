@@ -325,6 +325,18 @@ le **déploiement effectif** sur un environnement cible. La suite logique
 Ces options sont mentionnées dans le `plan_conteneurisation.md` comme
 évolutions possibles.
 
+### 1.12 Synthèse des commandes du pipeline
+
+| Commande | Objectif | Où définie | Quand exécutée |
+| -------- | -------- | ---------- | -------------- |
+| `./gradlew build jacocoTestReport copyDependencies` | Compile, teste, génère coverage et exporte dépendances | `back/build.gradle` + `ci.yml` | À chaque push/PR (CI) |
+| `npm ci` | Installe les dépendances front (build reproductible) | `front/package.json` + `ci.yml` | À chaque push/PR (CI) |
+| `npm run test -- --code-coverage --watch=false --browsers=ChromeHeadlessNoSandbox` | Tests Karma headless avec coverage | `front/package.json` + `ci.yml` | À chaque push/PR (CI) |
+| `docker build --target back -t microcrm-back:scan .` | Build image back pour scan | `ci.yml` (job image-scan) | À chaque push/PR (CI) |
+| `docker build --target front -t microcrm-front:scan .` | Build image front pour scan | `ci.yml` (job image-scan) | À chaque push/PR (CI) |
+| `git rev-parse --short HEAD` | Calcule le SHA court du commit pour tagger les images | `ci.yml` (job publish-docker) | Push main uniquement (CD) |
+| Build + push images via `docker/build-push-action` | Build et publie les images sur ghcr.io | `ci.yml` (job publish-docker) | Push main uniquement (CD) |
+
 ## Ressources
 
 - https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
