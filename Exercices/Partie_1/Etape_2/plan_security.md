@@ -52,16 +52,15 @@ avec le **OWASP Top 10:2025**. Risques particulièrement pertinents pour ce proj
 - URL backend à externaliser côté front (actuellement hardcodée)
 - Configuration BDD à externaliser côté back (actuellement HSQLDB par défaut)
 - Conteneurs Docker à exécuter en utilisateur non-root (actuellement root)
-- Branch protection activée sur `main` : aucun merge possible si la CI échoue
 
 **Garde-fou Quality Gate**
 - L'action `sonarqube-quality-gate-action` fait échouer le pipeline si
   le Quality Gate est KO
-- Branch protection activée sur `main` et `develop` : aucun merge
+- Branch protection activée sur `main` : aucun merge
   possible si la CI échoue
 - Les contournements admin sont désactivés (`Do not allow bypassing`)
 
-### Choix de version pour `trivy-action`
+### 1.4 Choix de version pour `trivy-action`
 
 L'action `aquasecurity/trivy-action` a subi une attaque de supply chain en
 mars 2026 (CVE-2026-33634) durant laquelle 76 des 77 tags ont été
@@ -85,13 +84,37 @@ force-pushés vers du code malveillant pendant ~12 heures.
 
 **Référentiel** : OWASP Top 10:2025 — A03 Software Supply Chain Failures
 
-### 1.4 Plan d'action de remédiation
+### 1.5 Résultats du scan Trivy (snapshot initial)
+
+Le premier scan Trivy a révélé **61 vulnérabilités** dans les images Docker :
+
+| Sévérité | Nombre approx. | Origine principale |
+| -------- |----------------| ------------------ |
+| CRITICAL | 5              | Apache Tomcat embarqué (Spring Boot) |
+| HIGH     | 19             | musl libc (Alpine), autres |
+| Autres   | 37             | Dépendances système Alpine |
+
+**Analyse** :
+- Les CVE Tomcat CRITICAL concernent des fonctionnalités (console JMX,
+  authentification client, multi-host) **non exploitées** dans un contexte
+  Spring Boot embarqué
+- Les CVE Alpine système sont des risques potentiels au niveau OS
+
+**Plan d'action** :
+- **Court terme** : revue manuelle des CVE critiques sur GitHub Security,
+  acknowledgment des non-applicables avec justification
+- **Moyen terme** : mise à jour Spring Boot 3.2.5 → 3.4+ pour bénéficier
+  d'un Tomcat plus récent (cf. plan de mise à jour - Partie 2)
+- **Long terme** : intégration de la mise à jour automatique des dépendances
+  via Dependabot
+
+### 1.6 Plan d'action de remédiation
 
 | Horizon         | Actions                                                          |
 | --------------- | ---------------------------------------------------------------- |
-| Immédiat        | Mise en place SonarCloud + Quality Gate + GitHub Secrets         |
-| Court terme     | Externalisation de la config (URL back, BDD), durcissement CORS  |
-| Moyen terme     | Enrichissement des suites de tests, mise à jour Angular vers LTS |
+| Immédiat        | Mise en place SonarCloud + Quality Gate + Trivy + GitHub Secrets |
+| Court terme     | Externalisation config (URL back, BDD), durcissement CORS, revue des CVE Trivy |
+| Moyen terme     | Enrichissement des suites de tests, MAJ Spring Boot, MAJ Angular vers LTS |
 
 ## Ressources
 
