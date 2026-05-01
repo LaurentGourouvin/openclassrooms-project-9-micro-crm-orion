@@ -199,6 +199,13 @@ dans une itération ultérieure.
 > ce qui confirme l'absence de vulnérabilité critique liée aux règles de sécurité
 > applicative. Les risques restants sont documentés comme dette de sécurité.
 
+#### Croisement ELK / SonarCloud
+
+> La stack ELK ne génère pas encore suffisamment de volume applicatif
+> pour identifier des corrélations entre erreurs fréquentes et zones
+> problématiques du code. Ce croisement sera pertinent une fois
+> l'application déployée en production avec un trafic réel.
+
 ### 1.7 Plan d'action de remédiation
 
 | Horizon         | Actions                                                          |
