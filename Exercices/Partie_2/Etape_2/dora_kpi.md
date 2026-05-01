@@ -15,6 +15,7 @@ Les métriques ont été collectées sur la période du **28 avril au 1er mai 20
 - GitHub Actions (historique des workflows)
 - SonarCloud (qualité et coverage)
 - GitHub Security (résultats Trivy)
+- Stack ELK (logs applicatifs centralisés)
 
 ---
 
