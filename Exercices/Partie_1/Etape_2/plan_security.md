@@ -132,6 +132,40 @@ Le premier scan Trivy a révélé **61 vulnérabilités** dans les images Docker
 
 ✅ **Passed** — le pipeline est bloquant sur le code nouveau.
 
+#### Duplications et complexité
+
+| Métrique | Valeur | Analyse |
+| -------- | ------ | ------- |
+| Duplication de code | 2.5% | Faible, pas de copier-coller problématique |
+| Cyclomatic Complexity | 91 (back: 33, front: 58) | Raisonnable pour une application CRUD |
+| Cognitive Complexity | 18 | Très faible, code lisible et maintenable |
+
+> Aucune zone à forte complexité identifiée. Le code est simple et cohérent
+> avec la nature CRUD de l'application.
+
+#### Alertes prioritaires identifiées
+
+| Priorité | Règle | Fichier | Description |
+| -------- | ----- | ------- | ----------- |
+| 🔴 High | angular-s4165 | `main-dashboard.component.ts` | Opération asynchrone dans le constructeur → à déplacer dans `ngOnInit()` |
+| 🟡 Medium | java-s4injectable | `InitialDataFixture.java` (x2) | Injection par champ (`@Autowired`) → à remplacer par injection constructeur |
+| 🟡 Medium | typescript-s1128 | `main-dashboard.component.ts` (x2) | Services non réassignés → déclarer `readonly` |
+| 🟡 Medium | typescript-s1128 | `organization-details.component.ts` | Service non réassigné → déclarer `readonly` |
+| 🟡 Medium | css-s4654 | `app.component.css`, `main-dashboard.component.css`, `organization-details.component.css` (x3) | Fichiers CSS vides → à supprimer |
+| 🟡 Medium | html-s6851 | `organization-details.component.html` | Label de formulaire sans contrôle associé → problème d'accessibilité |
+
+**Total alertes listées : 9** (1 High, 8 Medium)
+
+#### Plan de remédiation des alertes
+
+| Horizon | Actions |
+| ------- | ------- |
+| Court terme | Déplacer l'opération asynchrone dans `ngOnInit()` (High) |
+| Court terme | Déclarer les services Angular en `readonly` (quick win, 5 min par fichier) |
+| Court terme | Supprimer les fichiers CSS vides |
+| Moyen terme | Migrer vers injection constructeur côté back (`InitialDataFixture.java`) |
+| Moyen terme | Corriger l'accessibilité du label de formulaire |
+
 #### Coverage
 
 **37.4%** de couverture globale (front + back unifiés).
