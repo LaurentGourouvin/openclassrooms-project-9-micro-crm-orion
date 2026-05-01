@@ -108,7 +108,105 @@ Le premier scan Trivy a révélé **61 vulnérabilités** dans les images Docker
 - **Long terme** : intégration de la mise à jour automatique des dépendances
   via Dependabot
 
-### 1.6 Plan d'action de remédiation
+### 1.6 Résultats de l'analyse SonarCloud (snapshot initial)
+
+#### Qualité du code
+
+| Catégorie | Nombre | Sévérité dominante |
+| --------- | ------ | ------------------ |
+| Bugs | 2 | Medium |
+| Code Smells | 36 | Major (25), Minor (12) |
+| Reliability issues | 13 | — |
+| Maintainability issues | 30 | — |
+
+#### Répartition par sévérité
+
+| Sévérité | Nombre |
+| -------- | ------ |
+| Blocker | 0 |
+| High | 1 |
+| Medium | 27 |
+| Low | 12 |
+
+#### Quality Gate
+
+✅ **Passed** — le pipeline est bloquant sur le code nouveau.
+
+#### Duplications et complexité
+
+| Métrique | Valeur | Analyse |
+| -------- | ------ | ------- |
+| Duplication de code | 2.5% | Faible, pas de copier-coller problématique |
+| Cyclomatic Complexity | 91 (back: 33, front: 58) | Raisonnable pour une application CRUD |
+| Cognitive Complexity | 18 | Très faible, code lisible et maintenable |
+
+> Aucune zone à forte complexité identifiée. Le code est simple et cohérent
+> avec la nature CRUD de l'application.
+
+#### Alertes prioritaires identifiées
+
+| Priorité | Règle | Fichier | Description |
+| -------- | ----- | ------- | ----------- |
+| 🔴 High | angular-s4165 | `main-dashboard.component.ts` | Opération asynchrone dans le constructeur → à déplacer dans `ngOnInit()` |
+| 🟡 Medium | java-s4injectable | `InitialDataFixture.java` (x2) | Injection par champ (`@Autowired`) → à remplacer par injection constructeur |
+| 🟡 Medium | typescript-s1128 | `main-dashboard.component.ts` (x2) | Services non réassignés → déclarer `readonly` |
+| 🟡 Medium | typescript-s1128 | `organization-details.component.ts` | Service non réassigné → déclarer `readonly` |
+| 🟡 Medium | css-s4654 | `app.component.css`, `main-dashboard.component.css`, `organization-details.component.css` (x3) | Fichiers CSS vides → à supprimer |
+| 🟡 Medium | html-s6851 | `organization-details.component.html` | Label de formulaire sans contrôle associé → problème d'accessibilité |
+
+**Total alertes listées : 9** (1 High, 8 Medium)
+
+#### Plan de remédiation des alertes
+
+| Horizon | Actions |
+| ------- | ------- |
+| Court terme | Déplacer l'opération asynchrone dans `ngOnInit()` (High) |
+| Court terme | Déclarer les services Angular en `readonly` (quick win, 5 min par fichier) |
+| Court terme | Supprimer les fichiers CSS vides |
+| Moyen terme | Migrer vers injection constructeur côté back (`InitialDataFixture.java`) |
+| Moyen terme | Corriger l'accessibilité du label de formulaire |
+
+#### Coverage
+
+**37.4%** de couverture globale (front + back unifiés).
+Dette identifiée : 8 tests front, 2 tests back. Objectif à moyen terme : > 80%.
+
+#### Security Hotspots
+
+| Statut | Nombre | Détail |
+| ------ | ------ | ------ |
+| Safe | 3 | `@CrossOrigin` CORS — revus et acceptés (Spring Data REST, contexte interne) |
+| To Review | 1 | `front/src/index.html` — resource integrity check (Web:S5725, priorité Low) |
+
+**75% des hotspots sont reviewés.**
+
+Le hotspot restant (`Web:S5725`) concerne l'absence d'attribut `integrity`
+sur une balise `<link>` dans `index.html`. La priorité est **Low** et le
+risque réel est faible dans le contexte d'une application interne sans CDN
+externe critique. Ce point est documenté comme dette technique à traiter
+dans une itération ultérieure.
+
+#### Alignement OWASP
+
+| Risque OWASP | Résultat SonarCloud |
+| ------------ | ------------------- |
+| A01 – Broken Access Control | Pas de vulnérabilité détectée par Sonar. Risque identifié manuellement (Spring Data REST sans auth) |
+| A02 – Security Misconfiguration | 3 hotspots CORS → marqués Safe après revue |
+| A05 – Injection | Pas de vulnérabilité détectée (JPA prévient les injections SQL) |
+| A07 – Authentication Failures | Non couvert par Sonar (pas d'auth implémentée → dette identifiée) |
+
+> Aucun résultat dans les catégories OWASP Top 10 2025 et 2021 dans SonarCloud,
+> ce qui confirme l'absence de vulnérabilité critique liée aux règles de sécurité
+> applicative. Les risques restants sont documentés comme dette de sécurité.
+
+#### Croisement ELK / SonarCloud
+
+> La stack ELK ne génère pas encore suffisamment de volume applicatif
+> pour identifier des corrélations entre erreurs fréquentes et zones
+> problématiques du code. Ce croisement sera pertinent une fois
+> l'application déployée en production avec un trafic réel.
+
+### 1.7 Plan d'action de remédiation
 
 | Horizon         | Actions                                                          |
 | --------------- | ---------------------------------------------------------------- |
